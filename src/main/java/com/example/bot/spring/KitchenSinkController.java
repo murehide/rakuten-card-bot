@@ -18,12 +18,18 @@ package com.example.bot.spring;
 
 import static java.util.Collections.singletonList;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -41,7 +47,14 @@ import java.security.SecureRandom;
 import javax.crypto.Cipher;  
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
-
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import org.apache.http.conn.ssl.X509HostnameVerifier;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -1067,6 +1080,13 @@ public class KitchenSinkController {
             byteRe = enCrypt(userId,System.getenv("line.bot.channel-secret"));
             encrytStr = parseByte2HexStr(byteRe);
         }
+        
+        TrustManager[] trustAllCerts = new TrustManager[1];
+        TrustManager tm = new miTM();
+        trustAllCerts[0] = tm;
+        SSLContext sc = SSLContext.getInstance("SSL");
+        sc.init(null, trustAllCerts, null);
+        HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
 
         switch (text) {
             case "profile": {
@@ -1135,19 +1155,61 @@ public class KitchenSinkController {
                 break;
             }
             case "campaign": {
+                URL url = new URL("https://card.rakuten.com.tw/card-taiwan-app/rest/campaign-master");
+                HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("Authorization", "Basic YXBwOnJha3V0ZW5jYXJk");
+                conn.setDoOutput(true);
+                conn.setDoInput(true);
+                int responseCode = conn.getResponseCode();
+                String line;
+                String responseData = "";
+                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                while ((line = reader.readLine()) != null) {
+                    responseData += line;
+                }
+                JsonArray list = Json.createReader(new StringReader(responseData)).readArray();
+                String twCode1=list.getJsonObject(0).getString("campaignCode");
+                String twName1=list.getJsonObject(0).getString("campaignName");
+                if(twName1.length()>=60){
+                    twName1=twName1.substring(0,60);
+                }
+                String twDesc1=list.getJsonObject(0).getString("campaignDescription");
+                if(twDesc1.length()>=60){
+                    twDesc1=twDesc1.substring(0,60);
+                }
+                String twCode2=list.getJsonObject(1).getString("campaignCode");
+                String twName2=list.getJsonObject(1).getString("campaignName");
+                if(twName2.length()>=60){
+                    twName2=twName2.substring(0,60);
+                }
+                String twDesc2=list.getJsonObject(1).getString("campaignDescription");
+                 if(twDesc2.length()>=60){
+                    twDesc2=twDesc2.substring(0,60);
+                 }
+                String twCode3=list.getJsonObject(2).getString("campaignCode");
+                String twName3=list.getJsonObject(2).getString("campaignName");
+                if(twName3.length()>=60){
+                    twName3=twName3.substring(0,60);
+                }
+                String twDesc3=list.getJsonObject(2).getString("campaignDescription");
+                 if(twDesc3.length()>=60){
+                    twDesc3=twDesc3.substring(0,60);
+                }
                 CarouselTemplate carouselTemplate = new CarouselTemplate(
                         Arrays.asList(
-                                new CarouselColumn(createUri("/static/icon/1122.jpg"), "【66金夏趴】樂天點數最高11%！", "於活動期間內，在樂天市場使用樂天信用卡購物累積滿額並登錄活動，即可獲得加碼11%樂天點數回饋！", Arrays.asList(
+                                new CarouselColumn(new URI("https://image.card.tw.r10s.com/images/corp/campaign/"+twCode1+"/banner/710x310.jpg"), twName1, twDesc1, Arrays.asList(
                                         new URIAction("立即前往",
-                                                      URI.create("https://card.rakuten.com.tw/corp/campaign/cpn.xhtml?code=1122"), null)
+                                                      URI.create("https://card.rakuten.com.tw/corp/campaign/cpn.xhtml?code="+twCode1), null)
                                 )),
-                                new CarouselColumn(createUri("/static/icon/1075.jpg"), "【E 起同樂 一起饗樂】", "指定類別消費享最高10%刷卡金回饋", Arrays.asList(
+                                new CarouselColumn(new URI("https://image.card.tw.r10s.com/images/corp/campaign/"+twCode2+"/banner/710x310.jpg"), twName2, twDesc2, Arrays.asList(
                                         new URIAction("立即前往",
-                                                      URI.create("https://card.rakuten.com.tw/corp/campaign/cpn.xhtml?code=1075"), null)
+                                                      URI.create("https://card.rakuten.com.tw/corp/campaign/cpn.xhtml?code="+twCode2), null)
                                 )),
-                                new CarouselColumn(createUri("/static/icon/1124.jpg"), "【蝦皮新手大禮包】領券即享首筆五折起 >>限量開搶中", "卡友於活動期間內首次註冊蝦皮會員，首購時輸入專屬優惠碼並使用樂天卡結帳，即享滿額現折NT$200！", Arrays.asList(
+                                new CarouselColumn(new URI("https://image.card.tw.r10s.com/images/corp/campaign/"+twCode3+"/banner/710x310.jpg"), twName3, twDesc3, Arrays.asList(
                                         new URIAction("立即前往",
-                                                      URI.create("https://card.rakuten.com.tw/corp/campaign/cpn.xhtml?code=1124"), null)
+                                                      URI.create("https://card.rakuten.com.tw/corp/campaign/cpn.xhtml?code="+twCode3), null)
                                 ))
                         ));
                 TemplateMessage templateMessage = new TemplateMessage("最新優惠", carouselTemplate);
@@ -1157,15 +1219,15 @@ public class KitchenSinkController {
             case "installment": {
                 CarouselTemplate carouselTemplate = new CarouselTemplate(
                         Arrays.asList(
-                                new CarouselColumn(createUri("/static/icon/1123.jpg"), "【抽Dyson】夏天到了！抽Dyson空氣清淨機，再享5%回饋", "申辦單筆消費分期6期以上，享5%刷卡金回饋，每戶最高可回饋1,500元刷卡金，再抽Dyson空氣清淨機！", Arrays.asList(
+                                new CarouselColumn(new URI("https://image.card.tw.r10s.com/images/corp/campaign/1123/banner/710x310.jpg"), "【抽Dyson】夏天到了！抽Dyson空氣清淨機，再享5%回饋", "申辦單筆消費分期6期以上，享5%刷卡金回饋，每戶最高可回饋1,500元刷卡金，再抽Dyson空氣清淨機！", Arrays.asList(
                                         new URIAction("立即前往",
                                                       URI.create("https://card.rakuten.com.tw/members/campaign/cpn.xhtml?code=1123&uid="+encrytStr), null)
                                 )),
-                                new CarouselColumn(createUri("/static/icon/1125.jpg"), "【500元回饋】分期一筆就享驚人回饋！", "活動期間內只要成功自動分期一筆且登錄就享500元刷卡金回饋！", Arrays.asList(
+                                new CarouselColumn(new URI("https://image.card.tw.r10s.com/images/corp/campaign/1125/banner/710x310.jpg"), "【500元回饋】分期一筆就享驚人回饋！", "活動期間內只要成功自動分期一筆且登錄就享500元刷卡金回饋！", Arrays.asList(
                                         new URIAction("立即前往",
                                                       URI.create("https://card.rakuten.com.tw/members/campaign/cpn.xhtml?code=1125&uid="+encrytStr), null)
                                 )),
-                                new CarouselColumn(createUri("/static/icon/1126.jpg"), "【樂天就甘心】申辦帳單分期請您吃免費霜淇淋再折100！", "活動期間內線上申辦帳單分期成功並登錄，享刷卡金NT100元回饋、再送全家Fami原味霜淇淋一支！", Arrays.asList(
+                                new CarouselColumn(new URI("https://image.card.tw.r10s.com/images/corp/campaign/1126/banner/710x310.jpg"), "【樂天就甘心】申辦帳單分期請您吃免費霜淇淋再折100！", "活動期間內線上申辦帳單分期成功並登錄，享刷卡金NT100元回饋、再送全家Fami原味霜淇淋一支！", Arrays.asList(
                                         new URIAction("立即前往",
                                                       URI.create("https://card.rakuten.com.tw/members/campaign/cpn.xhtml?code=1126&uid="+encrytStr), null)
                                 ))
@@ -1175,19 +1237,61 @@ public class KitchenSinkController {
                 break;
             }
             case "japan": {
+                URL url2 = new URL("https://card.rakuten.com.tw/card-taiwan-app/rest/campaign-master/japan-benefit/all");
+                HttpsURLConnection conn2 = (HttpsURLConnection) url2.openConnection();
+                conn2.setRequestMethod("GET");
+                conn2.setRequestProperty("Content-Type", "application/json");
+                conn2.setRequestProperty("Authorization", "Basic YXBwOnJha3V0ZW5jYXJk");
+                conn2.setDoOutput(true);
+                conn2.setDoInput(true);
+                int responseCode2 = conn2.getResponseCode();
+                String line2;
+                String responseData2 = "";
+                BufferedReader reader2 = new BufferedReader(new InputStreamReader(conn2.getInputStream()));
+                while ((line2 = reader2.readLine()) != null) {
+                    responseData2 += line2;
+                }
+                JsonArray list2 = Json.createReader(new StringReader(responseData2)).readArray();
+                String jpCode1=list2.getJsonObject(0).getString("campaignCode");
+                String jpName1=list2.getJsonObject(0).getString("campaignName");
+                if(jpName1.length()>=60){
+                    jpName1=jpName1.substring(0,60);
+                }
+                String jpDesc1=list2.getJsonObject(0).getString("campaignDescription");
+                if(jpDesc1.length()>=60){
+                    jpDesc1=jpDesc1.substring(0,60);
+                }
+                String jpCode2=list2.getJsonObject(1).getString("campaignCode");
+                String jpName2=list2.getJsonObject(1).getString("campaignName");
+                if(jpName2.length()>=60){
+                    jpName2=jpName2.substring(0,60);
+                }
+                String jpDesc2=list2.getJsonObject(1).getString("campaignDescription");
+                if(jpDesc2.length()>=60){
+                    jpDesc2=jpDesc2.substring(0,60);
+                }
+                String jpCode3=list2.getJsonObject(2).getString("campaignCode");
+                String jpName3=list2.getJsonObject(2).getString("campaignName");
+                if(jpName3.length()>=60){
+                    jpName3=jpName3.substring(0,60);
+                }
+                String jpDesc3=list2.getJsonObject(2).getString("campaignDescription");
+                if(jpDesc3.length()>=60){
+                    jpDesc3=jpDesc3.substring(0,60);
+                }
                 CarouselTemplate carouselTemplate = new CarouselTemplate(
                         Arrays.asList(
-                                new CarouselColumn(createUri("/static/icon/1059.jpg"), "逛日本MITSUI OUTLET PARK名牌輕鬆購！送購物優惠券及精美小禮!", "出示兌換券及台灣樂天信用卡,即可換取精美小禮及合作店家所提供的優惠券。", Arrays.asList(
+                                new CarouselColumn(new URI("https://image.card.tw.r10s.com/images/corp/campaign/"+jpCode1+"/banner/710x310.jpg"), jpName1, jpDesc1, Arrays.asList(
                                         new URIAction("立即前往",
-                                                      URI.create("https://card.rakuten.com.tw/corp/japan-benefit/store.xhtml?code=1059"), null)
+                                                      URI.create("https://card.rakuten.com.tw/corp/japan-benefit/store.xhtml?code="+jpCode1), null)
                                 )),
-                                new CarouselColumn(createUri("/static/icon/1087.jpg"), "BicCamera集團購物享最高免稅10%+7%OFF", "出示優惠券並刷台灣樂天信用卡，得享最高免稅10%+7%OFF。", Arrays.asList(
+                                new CarouselColumn(new URI("https://image.card.tw.r10s.com/images/corp/campaign/"+jpCode2+"/banner/710x310.jpg"), jpName2, jpDesc2, Arrays.asList(
                                         new URIAction("立即前往",
-                                                      URI.create("https://card.rakuten.com.tw/corp/japan-benefit/store.xhtml?code=1087"), null)
+                                                      URI.create("https://card.rakuten.com.tw/corp/japan-benefit/store.xhtml?code="+jpCode2), null)
                                 )),
-                                new CarouselColumn(createUri("/static/icon/972.jpg"), "松本清免稅門市最高享免稅10%+7％OFF!", "實體免稅門市購物，消費滿額享免稅10%+最高7%OFF。", Arrays.asList(
+                                new CarouselColumn(new URI("https://image.card.tw.r10s.com/images/corp/campaign/"+jpCode3+"/banner/710x310.jpg"), jpName3, jpDesc3, Arrays.asList(
                                         new URIAction("立即前往",
-                                                      URI.create("https://card.rakuten.com.tw/corp/japan-benefit/store.xhtml?code=972"), null)
+                                                      URI.create("https://card.rakuten.com.tw/corp/japan-benefit/store.xhtml?code="+jpCode3), null)
                                 ))
                         ));
                 TemplateMessage templateMessage = new TemplateMessage("日本優惠", carouselTemplate);
@@ -1195,19 +1299,61 @@ public class KitchenSinkController {
                 break;
             }
             case "merchant": {
+                URL url3 = new URL("https://card.rakuten.com.tw/card-taiwan-app/rest/campaign-master/merchant/recommendation");
+                HttpsURLConnection conn3 = (HttpsURLConnection) url3.openConnection();
+                conn3.setRequestMethod("GET");
+                conn3.setRequestProperty("Content-Type", "application/json");
+                conn3.setRequestProperty("Authorization", "Basic YXBwOnJha3V0ZW5jYXJk");
+                conn3.setDoOutput(true);
+                conn3.setDoInput(true);
+                int responseCode3 = conn3.getResponseCode();
+                String line3;
+                String responseData3 = "";
+                BufferedReader reader3 = new BufferedReader(new InputStreamReader(conn3.getInputStream()));
+                while ((line3 = reader3.readLine()) != null) {
+                    responseData3 += line3;
+                }
+                JsonArray list3 = Json.createReader(new StringReader(responseData3)).readArray();
+                String meCode1=list3.getJsonObject(0).getString("campaignCode");
+                String meName1=list3.getJsonObject(0).getString("campaignName");
+                if(meName1.length()>=60){
+                    meName1=meName1.substring(0,60);
+                }
+                String meDesc1=list3.getJsonObject(0).getString("campaignDescription");
+                if(meDesc1.length()>=60){
+                    meDesc1=meDesc1.substring(0,60);
+                }
+                String meCode2=list3.getJsonObject(1).getString("campaignCode");
+                String meName2=list3.getJsonObject(1).getString("campaignName");
+                if(meName2.length()>=60){
+                    meName2=meName2.substring(0,60);
+                }
+                String meDesc2=list3.getJsonObject(1).getString("campaignDescription");
+                if(meDesc2.length()>=60){
+                    meDesc2=meDesc2.substring(0,60);
+                }
+                String meCode3=list3.getJsonObject(2).getString("campaignCode");
+                String meName3=list3.getJsonObject(2).getString("campaignName");
+                if(meName3.length()>=60){
+                    meName3=meName3.substring(0,60);
+                }
+                String meDesc3=list3.getJsonObject(2).getString("campaignDescription");
+                if(meDesc3.length()>=60){
+                    meDesc3=meDesc3.substring(0,60);
+                }
                 CarouselTemplate carouselTemplate = new CarouselTemplate(
                         Arrays.asList(
-                                new CarouselColumn(createUri("/static/icon/d621.jpg"), "沐越Mu Viet越式料理", "每桌贈「青木瓜雞絲沙拉」乙份", Arrays.asList(
+                                new CarouselColumn(new URI("https://image.card.tw.r10s.com/images/corp/merchant/"+meCode1+"/400x250.jpg"), meName1, meDesc1, Arrays.asList(
                                         new URIAction("立即前往",
-                                                      URI.create("https://card.rakuten.com.tw/corp/merchant/cpn.xhtml?code=d621"), null)
+                                                      URI.create("https://card.rakuten.com.tw/corp/merchant/cpn.xhtml?code="+meCode1), null)
                                 )),
-                                new CarouselColumn(createUri("/static/icon/d622.jpg"), "享鴨", "每桌贈「干貝絲翡翠炊蛋」乙份	", Arrays.asList(
+                                new CarouselColumn(new URI("https://image.card.tw.r10s.com/images/corp/merchant/"+meCode2+"/400x250.jpg"), meName2, meDesc2, Arrays.asList(
                                         new URIAction("立即前往",
-                                                      URI.create("https://card.rakuten.com.tw/corp/merchant/cpn.xhtml?code=d622"), null)
+                                                      URI.create("https://card.rakuten.com.tw/corp/merchant/cpn.xhtml?code="+meCode2), null)
                                 )),
-                                new CarouselColumn(createUri("/static/icon/d522.jpg"), "青花驕麻辣鍋", "每桌贈美國牛培根乙份", Arrays.asList(
+                                new CarouselColumn(new URI("https://image.card.tw.r10s.com/images/corp/merchant/"+meCode3+"/400x250.jpg"), meName3, meDesc3, Arrays.asList(
                                         new URIAction("立即前往",
-                                                      URI.create("https://card.rakuten.com.tw/corp/merchant/cpn.xhtml?code=d522"), null)
+                                                      URI.create("https://card.rakuten.com.tw/corp/merchant/cpn.xhtml?code="+meCode3), null)
                                 ))
                         ));
                 TemplateMessage templateMessage = new TemplateMessage("國內特店", carouselTemplate);
@@ -1215,19 +1361,40 @@ public class KitchenSinkController {
                 break;
             }
             case "merchant_installment": {
+                URL url4 = new URL("https://card.rakuten.com.tw/card-taiwan-app/rest/merchant-installment");
+                HttpsURLConnection conn4 = (HttpsURLConnection) url4.openConnection();
+                conn4.setRequestMethod("GET");
+                conn4.setRequestProperty("Content-Type", "application/json");
+                conn4.setRequestProperty("Authorization", "Basic YXBwOnJha3V0ZW5jYXJk");
+                conn4.setDoOutput(true);
+                conn4.setDoInput(true);
+                int responseCode4 = conn4.getResponseCode();
+                String line4;
+                String responseData4 = "";
+                BufferedReader reader4 = new BufferedReader(new InputStreamReader(conn4.getInputStream()));
+                while ((line4 = reader4.readLine()) != null) {
+                    responseData4 += line4;
+                }
+                JsonArray list4 = Json.createReader(new StringReader(responseData4)).readArray();
+                String miCode1=list4.getJsonObject(0).getString("merchantArea");
+                String miUrl1=list4.getJsonObject(0).getString("merchantUrl");
+                String miCode2=list4.getJsonObject(1).getString("merchantArea");
+                String miUrl2=list4.getJsonObject(1).getString("merchantUrl");
+                String miCode3=list4.getJsonObject(2).getString("merchantArea");
+                String miUrl3=list4.getJsonObject(2).getString("merchantUrl");
                 ImageCarouselTemplate imageCarouselTemplate = new ImageCarouselTemplate(
                         Arrays.asList(
-                                new ImageCarouselColumn(createUri("/static/icon/store_33.jpg"),
+                                new ImageCarouselColumn(new URI("https://image.card.tw.r10s.com/images/corp/merchant_installment/"+miCode1+"/200x162.jpg"),
                                                         new URIAction("立即前往",
-                                                                      URI.create("http://www.rakuten.com.tw/"), null)
+                                                                      URI.create(miUrl1), null)
                                 ),
-                                new ImageCarouselColumn(createUri("/static/icon/store_35.jpg"),
+                                new ImageCarouselColumn(new URI("https://image.card.tw.r10s.com/images/corp/merchant_installment/"+miCode2+"/200x162.jpg"),
                                                         new URIAction("立即前往",
-                                                                      URI.create("https://www.momoshop.com.tw/"), null)
+                                                                      URI.create(miUrl2), null)
                                 ),
-                                new ImageCarouselColumn(createUri("/static/icon/store_140.jpg"),
+                                new ImageCarouselColumn(new URI("https://image.card.tw.r10s.com/images/corp/merchant_installment/"+miCode3+"/200x162.jpg"),
                                                         new URIAction("立即前往",
-                                                                      URI.create("https://shopee.tw/"), null)
+                                                                      URI.create(miUrl3), null)
                                 )
                         ));
                 TemplateMessage templateMessage = new TemplateMessage("分期特約商家",
@@ -2454,6 +2621,29 @@ public class KitchenSinkController {
             sb.append(hex.toUpperCase()); 
         } 
         return sb.toString(); 
-    }  
+    }
+    
+    static class miTM implements TrustManager, X509TrustManager {
+
+        public X509Certificate[] getAcceptedIssuers() {
+            return null;
+        }
+
+        public boolean isServerTrusted(X509Certificate[] certs) {
+            return true;
+        }
+
+        public boolean isClientTrusted(X509Certificate[] certs) {
+            return true;
+        }
+
+        public void checkServerTrusted(X509Certificate[] certs, String authType)
+                throws CertificateException {
+        }
+
+        public void checkClientTrusted(X509Certificate[] certs, String authType)
+                throws CertificateException {
+        }
+    }
 
 }
